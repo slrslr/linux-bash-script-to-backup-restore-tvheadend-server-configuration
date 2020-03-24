@@ -1,0 +1,32 @@
+#!/bin/bash
+# Script to backup and restore TVHeadend server configuration on Linux, Rapberry Pi/Raspbian. Process will cause TVH to restart during the task.
+# setup: sudo su;cd;chmod 750 linux_tvheadend_server_backup_and_restore;crontab -e;append line to run backup every 6 months (make sure path exist):
+# 0 0 0 */6 * /bin/bash /root/linux_tvheadend_server_backup_and_restore backup 2&1>/dev/null
+# Run backup/restore manually:
+# A) ./linux_tvheadend_server_backup_and_restore backup
+# B) ./linux_tvheadend_server_backup_and_restore restore
+# to restore backup on a new installation, place your backup file manually to location like this: /home/hts/.hts/tvheadend_backup.tar
+# to enable e-mailing of the backup, type yes into appropriate variable below. Note that the script will then install mutt and sendmail service! (+10MB of disk space maybe). Check /var/log/maillog
+
+sendbackupviaemail=""
+email=""
+
+if [[ "$1" == "" ]];then echo "You need to run this script with parameter backup or restore (example: ./thisscriptname backup)" && exit;fi
+
+if [[ "$1" == "backup" ]];then
+service tvheadend stop
+mv -f /home/hts/.hts/tvheadend_backup.tar /home/hts/.hts/tvheadend_backup_previous.tar 2>/dev/null
+tar -cpf /home/hts/.hts/tvheadend_backup.tar -C /home/hts/.hts/ tvheadend
+service tvheadend start
+if [[ "$sendbackupviaemail" == "yes" ]];then
+apt-get install mutt sendmail -y 2>/dev/null||yum install mutt sendmail -y 2>/dev/null
+echo "Made on $(hostname) on $(date --rfc-3339=date)"|mutt -s "TVHeadend server configuration backup" -a "/home/hts/.hts/tvheadend_backup.tar" -- "$email"
+fi
+fi
+
+if [[ "$1" == "restore" ]];then
+service tvheadend stop
+mv -f /home/hts/.hts/tvheadend /home/hts/.hts/tvheadend_before_last_restore 2>/dev/null
+tar -xpf /home/hts/.hts/tvheadend_backup.tar -C /home/hts/.hts/
+service tvheadend start
+fi
