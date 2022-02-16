@@ -10,23 +10,29 @@
 
 sendbackupviaemail=""
 email=""
+service_name=tvheadend
+default_home_dir=/home/hts
 
 if [[ "$1" == "" ]];then echo "You need to run this script with parameter backup or restore (example: ./thisscriptname backup)" && exit;fi
 
+[ -r /etc/default/$service_name ] && . /etc/default/$service_name
+[ -z "$TVH_USER" ] || eval home_dir=~$TVH_USER
+[ -z "$home_dir" ] && home_dir=$default_home_dir
+
 if [[ "$1" == "backup" ]];then
 service tvheadend stop
-mv -f /home/hts/.hts/tvheadend_backup.tar /home/hts/.hts/tvheadend_backup_previous.tar 2>/dev/null
-tar -cpf /home/hts/.hts/tvheadend_backup.tar -C /home/hts/.hts/ tvheadend
+mv -f $home_dir/.hts/tvheadend_backup.tar $home_dir/.hts/tvheadend_backup_previous.tar 2>/dev/null
+tar -cpf $home_dir/.hts/tvheadend_backup.tar -C $home_dir/.hts/ tvheadend
 service tvheadend start
 if [[ "$sendbackupviaemail" == "yes" ]];then
 apt-get install mutt sendmail -y 2>/dev/null||yum install mutt sendmail -y 2>/dev/null
-echo "Made on $(hostname) on $(date --rfc-3339=date)"|mutt -s "TVHeadend server configuration backup" -a "/home/hts/.hts/tvheadend_backup.tar" -- "$email"
+echo "Made on $(hostname) on $(date --rfc-3339=date)"|mutt -s "TVHeadend server configuration backup" -a $home_dir"/.hts/tvheadend_backup.tar" -- "$email"
 fi
 fi
 
 if [[ "$1" == "restore" ]];then
 service tvheadend stop
-mv -f /home/hts/.hts/tvheadend /home/hts/.hts/tvheadend_before_last_restore 2>/dev/null
-tar -xpf /home/hts/.hts/tvheadend_backup.tar -C /home/hts/.hts/
+mv -f $home_dir/.hts/tvheadend $home_dir/.hts/tvheadend_before_last_restore 2>/dev/null
+tar -xpf $home_dir/.hts/tvheadend_backup.tar -C $home_dir/.hts/
 service tvheadend start
 fi
